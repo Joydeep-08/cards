@@ -559,8 +559,8 @@ async function finalizeSurprise(order){
       }
 
       setLoadingText('Saving your surprise…');
-      await withRetry(async ()=>{
-        const { error: dbErr } = await sb.from('girlfriends_day').insert({
+      row = await withRetry(async ()=>{
+        const { data, error: dbErr } = await sb.from('girlfriends_day').insert({
           recipient: order.recipient,
           sender: order.sender,
           message: order.message,
@@ -571,14 +571,13 @@ async function finalizeSurprise(order){
           coupon: order.coupon,
           payment_id: order.paymentId,
           paid: true
-        });
+        }).select().single();
         if(dbErr) throw dbErr;
+        return data;
       }, { attempts: 4, baseDelay: 1000, onAttempt: (n,total)=> n>1 && setLoadingText(`Saving your surprise (retry ${n}/${total})…`) });
     }
 
-    const payload = { r: order.recipient, s: order.sender, m: order.message, p: urls };
-    const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
-    const link = `${location.origin}${location.pathname}?d=${encoded}`;
+    const link = `${location.origin}${location.pathname}?id=${row.id}`;
 
     document.getElementById('out-link').value = link;
 
@@ -680,39 +679,60 @@ function restartFlow(){
   goTo('step-intake');
 }
 
-/* ---------- viewer mode: ?d=<base64 payload> ---------- */
-(function initViewer(){
+/* ---------- viewer mode: ?id=<row uuid> (new, short) or ?d=<base64 payload> (legacy) ---------- */
+function renderViewer(recipient, sender, message, photos){
+  isViewerMode = true;
+  state.recipient = recipient;
+  state.sender = sender;
+  state.message = message;
+  state.photos = photos;
+
+  document.getElementById('env-title').textContent = `Happy Girlfriend's Day`;
+  document.getElementById('env-photo').src = photos[0];
+  document.getElementById('letter-photo').src = photos[1];
+  document.getElementById('letter-name').textContent = recipient;
+  document.getElementById('letter-sender').textContent = sender;
+  document.getElementById('letter-body').textContent = message;
+  buildGalleryDots();
+  galleryIndex = 0;
+  updateGallery();
+
+  document.getElementById('gallery-actions').innerHTML = '<button class="btn-ghost" onclick="goTo(\'step-letter\')">← Back</button>';
+  document.getElementById('gallery-restart').style.display = 'none';
+  goTo('step-envelope');
+}
+
+(async function initViewer(){
   const params = new URLSearchParams(location.search);
+  const id = params.get('id');
   const d = params.get('d');
-  if(!d){
-    // creator flow — surface any unfinished paid order so it's never silently lost
-    if(loadOrderLocal()) document.getElementById('resume-banner').style.display = 'block';
+
+  if(id){
+    try{
+      const { data, error } = await withRetry(
+        ()=> sb.from('girlfriends_day').select('*').eq('id', id).eq('paid', true).single(),
+        { attempts: 3, baseDelay: 800 }
+      );
+      if(error || !data) throw error || new Error('not found');
+      renderViewer(data.recipient, data.sender, data.message, [data.photo1, data.photo2, data.photo3]);
+    }catch(err){
+      console.error('Could not load surprise', err);
+    }
     return;
   }
-  try{
-    const payload = JSON.parse(decodeURIComponent(escape(atob(d))));
-    isViewerMode = true;
-    state.recipient = payload.r;
-    state.sender = payload.s;
-    state.message = payload.m;
-    state.photos = payload.p;
 
-    document.getElementById('env-title').textContent = `Happy Girlfriend's Day`;
-    document.getElementById('env-photo').src = payload.p[0];
-    document.getElementById('letter-photo').src = payload.p[1];
-    document.getElementById('letter-name').textContent = payload.r;
-    document.getElementById('letter-sender').textContent = payload.s;
-    document.getElementById('letter-body').textContent = payload.m;
-    buildGalleryDots();
-    galleryIndex = 0;
-    updateGallery();
-
-    document.getElementById('gallery-actions').innerHTML = '<button class="btn-ghost" onclick="goTo(\'step-letter\')">← Back</button>';
-    document.getElementById('gallery-restart').style.display = 'none';
-    goTo('step-envelope');
-  }catch(err){
-    console.error('Bad link payload', err);
+  if(d){
+    try{
+      const payload = JSON.parse(decodeURIComponent(escape(atob(d))));
+      renderViewer(payload.r, payload.s, payload.m, payload.p);
+    }catch(err){
+      console.error('Bad link payload', err);
+    }
+    return;
   }
+
+  // creator flow — surface any unfinished paid order so it's never silently lost
+  if(loadOrderLocal()) document.getElementById('resume-banner').style.display = 'block';
 })();
 </script>
 </body>
