@@ -235,7 +235,7 @@ Happy Girlfriend's Day. You deserve to feel loved today, and every day after.</t
     <section id="step-letter" style="display:none;flex:1;flex-direction:column">
       <div style="display:flex;flex:1;min-height:0">
         <div style="width:38%;position:relative;overflow:hidden">
-          <img id="letter-photo" src="" style="width:100%;height:100%;object-fit:cover" />
+          <img id="letter-photo" src="photo.jpeg" style="width:100%;height:100%;object-fit:cover" />
         </div>
         <div style="width:62%;padding:26px 22px;display:flex;flex-direction:column">
           <div class="font-display" style="font-size:19px;font-style:italic;font-weight:600;color:#3a0f1a;margin-bottom:12px">Dear <span id="letter-name"></span>,</div>
@@ -387,7 +387,7 @@ function startPreview(){
   // preview uses local blob URLs — nothing uploaded or charged yet
   document.getElementById('env-title').textContent = `Happy Girlfriend's Day`;
   document.getElementById('env-photo').src = state.photos[0];
-  document.getElementById('letter-photo').src = state.photos[1];
+  document.getElementById('letter-photo').src = 'photo.jpeg';
   document.getElementById('letter-name').textContent = recipient;
   document.getElementById('letter-sender').textContent = sender;
   document.getElementById('letter-body').textContent = message;
@@ -608,7 +608,7 @@ async function finalizeSurprise(order){
 
     document.getElementById('env-title').textContent = `Happy Girlfriend's Day`;
     document.getElementById('env-photo').src = urls[0];
-    document.getElementById('letter-photo').src = urls[1];
+    document.getElementById('letter-photo').src = 'photo.jpeg';
     document.getElementById('letter-name').textContent = order.recipient;
     document.getElementById('letter-sender').textContent = order.sender;
     document.getElementById('letter-body').textContent = order.message;
@@ -714,7 +714,7 @@ function renderViewer(recipient, sender, message, photos){
 
   document.getElementById('env-title').textContent = `Happy Girlfriend's Day`;
   document.getElementById('env-photo').src = photos[0];
-  document.getElementById('letter-photo').src = photos[1];
+  document.getElementById('letter-photo').src = 'photo.jpeg';
   document.getElementById('letter-name').textContent = recipient;
   document.getElementById('letter-sender').textContent = sender;
   document.getElementById('letter-body').textContent = message;
