@@ -101,6 +101,12 @@
   .photo-slot img{width:100%;height:100%;object-fit:cover}
 
   ::-webkit-scrollbar{width:0}
+
+  .write-cursor{
+    display:inline-block;width:1.5px;height:12px;background:#b83b5e;
+    margin-left:2px;vertical-align:-1px;animation:blinkCursor .9s steps(1) infinite;
+  }
+  @keyframes blinkCursor{50%{opacity:0}}
 </style>
 </head>
 <body>
@@ -136,9 +142,9 @@
           <input type="file" id="file-input" accept="image/*" class="hidden" style="display:none" />
         </div>
 
-        <textarea id="in-message" class="inp" rows="5" style="resize:none">If I could write everything you mean to me, this page would never end. So instead, I'll tell you this: thank you for being my safe place, my biggest smile, and my favorite person to spend every ordinary day with.
+        <textarea id="in-message" class="inp" rows="5" style="resize:none">Just a little note to say... you make my ordinary days feel soft, sweet, and so much brighter.
 
-Happy Girlfriend's Day. You deserve to feel loved today, and every day after.</textarea>
+Happy Girlfriend's Day, my love. 💕</textarea>
       </div>
 
       <div id="intake-err" style="display:none;color:#c62828;font-size:12px;margin-top:10px">Add both names and all 3 photos first.</div>
@@ -237,9 +243,11 @@ Happy Girlfriend's Day. You deserve to feel loved today, and every day after.</t
         <div style="width:38%;position:relative;overflow:hidden">
           <img id="letter-photo" src="photo.jpeg" style="width:100%;height:100%;object-fit:cover" />
         </div>
-        <div style="width:62%;padding:26px 22px;display:flex;flex-direction:column">
-          <div class="font-display" style="font-size:19px;font-style:italic;font-weight:600;color:#3a0f1a;margin-bottom:12px">Dear <span id="letter-name"></span>,</div>
-          <div id="letter-body" style="font-size:12.5px;line-height:1.7;color:#4a2530;flex:1;overflow-y:auto;white-space:pre-wrap"></div>
+        <div style="width:62%;padding:26px 20px 20px;display:flex;flex-direction:column;position:relative">
+          <div style="position:absolute;top:12px;right:14px;font-size:15px;opacity:.55">💗</div>
+          <div class="font-display" style="font-size:19px;font-style:italic;font-weight:600;color:#3a0f1a;margin-bottom:6px">Dear <span id="letter-name"></span>,</div>
+          <div style="width:34px;height:2px;background:#e7b9c6;border-radius:2px;margin-bottom:14px"></div>
+          <div id="letter-body" style="font-size:12.5px;line-height:22px;color:#4a2530;flex:1;overflow-y:auto;white-space:pre-wrap;border-left:1.5px dashed #ecc3cf;padding-left:10px;background-image:repeating-linear-gradient(to bottom, transparent, transparent 21px, #f3d3da 22px);background-position:10px 3px"><span id="letter-body-text"></span><span id="letter-cursor" class="write-cursor"></span></div>
           <div class="font-display" style="font-style:italic;font-size:13px;color:#b83b5e;margin-top:14px;text-align:right">— <span id="letter-sender"></span></div>
           <button class="btn" style="margin-top:14px;align-self:flex-end;padding:8px 20px" onclick="goTo('step-gallery')">Next</button>
         </div>
@@ -390,7 +398,6 @@ function startPreview(){
   document.getElementById('letter-photo').src = 'photo.jpeg';
   document.getElementById('letter-name').textContent = recipient;
   document.getElementById('letter-sender').textContent = sender;
-  document.getElementById('letter-body').textContent = message;
   buildGalleryDots();
   galleryIndex = 0;
   updateGallery();
@@ -611,7 +618,7 @@ async function finalizeSurprise(order){
     document.getElementById('letter-photo').src = 'photo.jpeg';
     document.getElementById('letter-name').textContent = order.recipient;
     document.getElementById('letter-sender').textContent = order.sender;
-    document.getElementById('letter-body').textContent = order.message;
+    state.message = order.message;
     state.photos = urls;
     buildGalleryDots();
     galleryIndex = 0;
@@ -689,6 +696,30 @@ function galleryNav(dir){
   updateGallery();
 }
 
+/* ---------- letter typewriter ---------- */
+let letterTypeTimer = null;
+function typewriterLetter(text){
+  const textEl = document.getElementById('letter-body-text');
+  const cursorEl = document.getElementById('letter-cursor');
+  const bodyEl = document.getElementById('letter-body');
+  if(!textEl) return;
+  if(letterTypeTimer){ clearInterval(letterTypeTimer); letterTypeTimer = null; }
+  textEl.textContent = '';
+  cursorEl.style.display = 'inline-block';
+  const chars = Array.from(text || '');
+  let i = 0;
+  letterTypeTimer = setInterval(()=>{
+    textEl.textContent += chars[i] || '';
+    i++;
+    bodyEl.scrollTop = bodyEl.scrollHeight;
+    if(i >= chars.length){
+      clearInterval(letterTypeTimer);
+      letterTypeTimer = null;
+      cursorEl.style.display = 'none';
+    }
+  }, 24);
+}
+
 /* ---------- nav ---------- */
 function goTo(id){
   ['step-intake','step-payment','step-linkout','step-envelope','step-gif','step-letter','step-gallery'].forEach(s=>{
@@ -697,6 +728,7 @@ function goTo(id){
   const el = document.getElementById(id);
   el.style.display = 'flex';
   el.classList.remove('fade-up'); void el.offsetWidth; el.classList.add('fade-up');
+  if(id === 'step-letter') typewriterLetter(state.message);
 }
 function restartFlow(){
   document.getElementById('env-flap').style.transform = 'scaleY(1)';
@@ -717,7 +749,6 @@ function renderViewer(recipient, sender, message, photos){
   document.getElementById('letter-photo').src = 'photo.jpeg';
   document.getElementById('letter-name').textContent = recipient;
   document.getElementById('letter-sender').textContent = sender;
-  document.getElementById('letter-body').textContent = message;
   buildGalleryDots();
   galleryIndex = 0;
   updateGallery();
