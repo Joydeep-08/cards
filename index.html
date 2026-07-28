@@ -166,9 +166,13 @@
           <input type="file" id="file-input" accept="image/*" class="hidden" style="display:none" />
         </div>
 
-        <textarea id="in-message" class="inp" rows="5" style="resize:none">Just a little note to say... you make my ordinary days feel soft, sweet, and so much brighter.
+        <textarea id="in-message" class="inp" rows="7" style="resize:none">I know I don't say it enough, so let me say it properly today: you are, hands down, the best part of my life.
 
-Happy Girlfriend's Day, my love. 💕</textarea>
+You turn the most ordinary days into something worth remembering — a random Tuesday feels a little more magical just because you're in it. Your laugh is my favorite sound, your hugs are my favorite place, and your heart is honestly the softest, kindest thing I know.
+
+Thank you for choosing me, again and again, even on the days I don't make it easy. I promise to keep choosing you right back — today, tomorrow, and every ordinary Tuesday after that.
+
+Happy Girlfriend's Day, my love. You're stuck with me forever now. 💕</textarea>
       </div>
 
       <div id="intake-err" style="display:none;color:#c62828;font-size:12px;margin-top:10px">Add both names and a message first.</div>
@@ -220,6 +224,7 @@ Happy Girlfriend's Day, my love. 💕</textarea>
 
     <!-- ============ STEP 1 — ENVELOPE ============ -->
     <section id="step-envelope" style="display:none;flex:1;flex-direction:column;align-items:center;justify-content:center;padding:36px 26px;text-align:center">
+      <button class="btn-ghost btn-sm" style="position:absolute;top:14px;left:14px;z-index:5" onclick="goBackTo('step-intake')">← Edit</button>
       <div class="font-display fade-up" style="font-size:26px;font-weight:700;color:#3a0f1a;margin-bottom:26px" id="env-title">Happy Girlfriend's Day</div>
 
       <div id="envelope" class="fade-up" onclick="openEnvelope()" style="cursor:pointer;width:230px;position:relative;perspective:600px">
@@ -238,6 +243,7 @@ Happy Girlfriend's Day, my love. 💕</textarea>
 
     <!-- ============ STEP 1.5 — GIF WELCOME ============ -->
     <section id="step-gif" style="display:none;flex:1;flex-direction:column;align-items:center;justify-content:center;padding:34px 26px;text-align:center;position:relative;overflow:hidden">
+      <button class="btn-ghost btn-sm" style="position:absolute;top:14px;left:14px;z-index:5" onclick="goBackTo('step-envelope')">← Back</button>
       <div style="position:absolute;top:18px;left:22px;font-size:16px;opacity:.5">🎀</div>
       <div style="position:absolute;top:26px;right:26px;font-size:14px;opacity:.5">💗</div>
       <div style="position:absolute;bottom:22px;left:28px;font-size:14px;opacity:.4">💌</div>
@@ -273,7 +279,10 @@ Happy Girlfriend's Day, my love. 💕</textarea>
           <div style="width:34px;height:2px;background:#e7b9c6;border-radius:2px;margin-bottom:14px"></div>
           <div id="letter-body" style="font-size:12.5px;line-height:22px;color:#4a2530;flex:1;overflow-y:auto;white-space:pre-wrap;border-left:1.5px dashed #ecc3cf;padding-left:10px;background-image:repeating-linear-gradient(to bottom, transparent, transparent 21px, #f3d3da 22px);background-position:10px 3px"><span id="letter-body-text"></span><span id="letter-cursor" class="write-cursor"></span></div>
           <div class="font-display" style="font-style:italic;font-size:13px;color:#b83b5e;margin-top:14px;text-align:right">— <span id="letter-sender"></span></div>
-          <button class="btn" style="margin-top:14px;align-self:flex-end;padding:8px 20px" onclick="goTo('step-gallery')">Next</button>
+          <div style="display:flex;justify-content:space-between;margin-top:14px">
+            <button class="btn-ghost btn-sm" onclick="goTo('step-gif')">← Back</button>
+            <button class="btn btn-sm" onclick="goTo('step-gallery')">Next</button>
+          </div>
         </div>
       </div>
     </section>
@@ -816,6 +825,13 @@ function restartFlow(){
   document.getElementById('env-flap').style.transform = 'scaleY(1)';
   document.getElementById('env-hint').textContent = 'tap to open';
   goTo('step-intake');
+}
+function goBackTo(id){
+  // stepping back through the envelope must reset it, otherwise it looks
+  // already-opened next time it's shown
+  document.getElementById('env-flap').style.transform = 'scaleY(1)';
+  document.getElementById('env-hint').textContent = 'tap to open';
+  goTo(id);
 }
 
 /* ---------- viewer mode: ?id=<row uuid> (new, short) or ?d=<base64 payload> (legacy) ---------- */
