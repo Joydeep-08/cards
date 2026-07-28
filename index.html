@@ -206,6 +206,31 @@ Happy Girlfriend's Day. You deserve to feel loved today, and every day after.</t
       <div style="font-size:10px;letter-spacing:2px;color:#d9a9b5;text-transform:uppercase;margin-top:30px">designs by joy</div>
     </section>
 
+    <!-- ============ STEP 1.5 — GIF WELCOME ============ -->
+    <section id="step-gif" style="display:none;flex:1;flex-direction:column;align-items:center;justify-content:center;padding:34px 26px;text-align:center;position:relative;overflow:hidden">
+      <div style="position:absolute;top:18px;left:22px;font-size:16px;opacity:.5">🎀</div>
+      <div style="position:absolute;top:26px;right:26px;font-size:14px;opacity:.5">💗</div>
+      <div style="position:absolute;bottom:22px;left:28px;font-size:14px;opacity:.4">💌</div>
+      <div style="position:absolute;bottom:16px;right:20px;font-size:16px;opacity:.5">🎀</div>
+
+      <div class="font-script fade-up" style="font-size:28px;color:#b83b5e;margin-bottom:4px">welcome, love</div>
+      <p class="fade-up" style="color:#8a4a5c;font-size:12px;margin-bottom:22px;letter-spacing:.3px">a little something, just for you</p>
+
+      <div class="fade-up" style="width:200px;background:#fffaf5;padding:10px 10px 16px;border-radius:16px;box-shadow:0 20px 36px -14px rgba(184,59,94,.45);transform:rotate(-2deg);position:relative;border:1px solid #f3d3da">
+        <div style="position:absolute;top:-12px;left:-12px;font-size:22px;transform:rotate(-8deg)">💗</div>
+        <div style="position:absolute;top:-10px;right:-14px;font-size:18px;transform:rotate(10deg)">🎀</div>
+        <img src="https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExeHk0c2pwMHNnMHVtMmEzNnlyNzhjN2J0OXpiMTJyZ3JjMTdzd21paiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/s6fnVyWTfM2nUKuMVY/giphy.gif" alt="a warm hug" style="width:100%;border-radius:10px;display:block" />
+        <div style="position:absolute;bottom:-10px;right:-10px;font-size:20px;transform:rotate(-6deg)">💕</div>
+      </div>
+
+      <div class="font-display fade-up" style="font-size:14.5px;font-style:italic;color:#3a0f1a;margin-top:24px;max-width:260px;line-height:1.65">
+        Every hug, every quiet moment, every little "us" — that's what this is for.
+      </div>
+      <div class="font-script fade-up" style="font-size:15px;color:#b8718a;margin-top:6px">happy girlfriend's day 💕</div>
+
+      <button class="btn fade-up" style="margin-top:28px" onclick="goTo('step-letter')">Open the letter →</button>
+    </section>
+
     <!-- ============ STEP 2 — LETTER ============ -->
     <section id="step-letter" style="display:none;flex:1;flex-direction:column">
       <div style="display:flex;flex:1;min-height:0">
@@ -645,7 +670,7 @@ function copyLink(){
 function openEnvelope(){
   document.getElementById('env-flap').style.transform = 'scaleY(0)';
   document.getElementById('env-hint').textContent = 'opening...';
-  setTimeout(()=> goTo('step-letter'), 550);
+  setTimeout(()=> goTo('step-gif'), 550);
 }
 
 /* ---------- gallery ---------- */
@@ -666,7 +691,7 @@ function galleryNav(dir){
 
 /* ---------- nav ---------- */
 function goTo(id){
-  ['step-intake','step-payment','step-linkout','step-envelope','step-letter','step-gallery'].forEach(s=>{
+  ['step-intake','step-payment','step-linkout','step-envelope','step-gif','step-letter','step-gallery'].forEach(s=>{
     document.getElementById(s).style.display = 'none';
   });
   const el = document.getElementById(id);
