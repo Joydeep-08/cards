@@ -9,6 +9,17 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,500;1,600&family=Dancing+Script:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  // runs immediately, before the body paints — if this is a shared link
+  // (?id=... or ?d=...) mark <html> so CSS can hide the edit form and show
+  // a loader instead of ever letting it flash on screen
+  (function(){
+    var params = new URLSearchParams(location.search);
+    if(params.get('id') || params.get('d')){
+      document.documentElement.classList.add('viewer-boot');
+    }
+  })();
+</script>
 <style>
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
   body{
@@ -129,6 +140,10 @@
   .board-quote::after{bottom:-14px;right:10px}
   .board-ribbon{background:#b83b5e;color:#fff;border-radius:10px;padding:12px 10px;font-size:11px;letter-spacing:.3px;text-align:center;line-height:1.6}
   .board-ribbon .font-script{font-size:16px;display:block;margin-top:2px}
+
+  /* shared-link boot state — kills the form flash before JS decides what to show */
+  html.viewer-boot #step-intake{display:none !important}
+  html.viewer-boot #step-bootload{display:flex !important}
 </style>
 </head>
 <body>
@@ -137,6 +152,13 @@
   <div class="frame-pattern"></div>
   <div class="frame-icons" id="frame-icons"></div>
   <div class="card" id="card">
+
+    <!-- ============ STEP BOOT — SHARED LINK LOADING / ERROR ============ -->
+    <section id="step-bootload" style="display:none;flex:1;flex-direction:column;align-items:center;justify-content:center;padding:36px 26px;text-align:center">
+      <div class="spinner" id="bootload-spinner"></div>
+      <div style="margin-top:16px;font-size:12.5px;color:#b8718a" id="bootload-text">Opening your surprise…</div>
+      <button id="bootload-retry" class="btn btn-sm" style="display:none;margin-top:18px" onclick="location.reload()">Retry</button>
+    </section>
 
     <!-- ============ STEP 0 — INTAKE ============ -->
     <section id="step-intake" class="fade-up" style="padding:34px 26px;flex:1;display:flex;flex-direction:column">
@@ -224,7 +246,7 @@ Happy Girlfriend's Day, my love. You're stuck with me forever now. 💕</textare
 
     <!-- ============ STEP 1 — ENVELOPE ============ -->
     <section id="step-envelope" style="display:none;flex:1;flex-direction:column;align-items:center;justify-content:center;padding:36px 26px;text-align:center">
-      <button class="btn-ghost btn-sm" style="position:absolute;top:14px;left:14px;z-index:5" onclick="goBackTo('step-intake')">← Edit</button>
+      <button id="env-edit-btn" class="btn-ghost btn-sm" style="position:absolute;top:14px;left:14px;z-index:5" onclick="goBackTo('step-intake')">← Edit</button>
       <div class="font-display fade-up" style="font-size:26px;font-weight:700;color:#3a0f1a;margin-bottom:26px" id="env-title">Happy Girlfriend's Day</div>
 
       <div id="envelope" class="fade-up" onclick="openEnvelope()" style="cursor:pointer;width:230px;position:relative;perspective:600px">
@@ -813,7 +835,7 @@ function typewriterLetter(text){
 
 /* ---------- nav ---------- */
 function goTo(id){
-  ['step-intake','step-payment','step-linkout','step-envelope','step-gif','step-letter','step-gallery'].forEach(s=>{
+  ['step-intake','step-payment','step-linkout','step-envelope','step-gif','step-letter','step-gallery','step-bootload'].forEach(s=>{
     document.getElementById(s).style.display = 'none';
   });
   const el = document.getElementById(id);
@@ -851,6 +873,7 @@ function renderViewer(recipient, sender, message, photos){
 
   document.getElementById('gallery-actions').innerHTML = '<button class="btn-ghost" onclick="goTo(\'step-letter\')">← Back</button>';
   document.getElementById('gallery-restart').style.display = 'none';
+  document.getElementById('env-edit-btn').style.display = 'none';
   goTo('step-envelope');
 }
 
@@ -859,6 +882,12 @@ function renderViewer(recipient, sender, message, photos){
   const id = params.get('id');
   const d = params.get('d');
 
+  function bootError(msg){
+    document.getElementById('bootload-spinner').style.display = 'none';
+    document.getElementById('bootload-text').textContent = msg;
+    document.getElementById('bootload-retry').style.display = 'inline-block';
+  }
+
   if(id){
     try{
       const { data, error } = await withRetry(
@@ -866,9 +895,11 @@ function renderViewer(recipient, sender, message, photos){
         { attempts: 3, baseDelay: 800 }
       );
       if(error || !data) throw error || new Error('not found');
+      document.documentElement.classList.remove('viewer-boot');
       renderViewer(data.recipient, data.sender, data.message, [data.photo1, data.photo2, data.photo3, data.photo4, data.photo5]);
     }catch(err){
       console.error('Could not load surprise', err);
+      bootError("Hmm, this link isn't loading. Check your connection and try again.");
     }
     return;
   }
@@ -876,9 +907,11 @@ function renderViewer(recipient, sender, message, photos){
   if(d){
     try{
       const payload = JSON.parse(decodeURIComponent(escape(atob(d))));
+      document.documentElement.classList.remove('viewer-boot');
       renderViewer(payload.r, payload.s, payload.m, payload.p);
     }catch(err){
       console.error('Bad link payload', err);
+      bootError("This link looks broken. Ask for a new one.");
     }
     return;
   }
