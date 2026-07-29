@@ -73,13 +73,9 @@
   .corner-tr{top:14px;right:16px}
   .corner-bl{bottom:14px;left:16px;transform:scaleX(-1)}
 
-  /* pin dots for page indicator */
-  .dots{display:flex;gap:6px;justify-content:center;margin:14px 0 2px}
-  .dot{width:6px;height:6px;border-radius:50%;background:#e7b9c6}
-  .dot.active{background:#b83b5e;width:16px;border-radius:4px;transition:width .25s}
-
   @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
   @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes pop{0%,100%{transform:scale(1)}50%{transform:scale(1.035)}}
   .fade-up{animation:fadeUp .5s ease both}
   .spinner{width:26px;height:26px;border-radius:50%;border:3px solid #ecc3cf;border-top-color:#b83b5e;animation:spin .8s linear infinite}
 
@@ -119,7 +115,33 @@
   }
   @keyframes blinkCursor{50%{opacity:0}}
 
-  /* ---- pinterest-style vision board (step 3) ---- */
+  /* ---- phone lock-screen notifications (step 0.5) ---- */
+  .phone-bg{
+    flex:1;display:flex;flex-direction:column;align-items:center;
+    background:linear-gradient(180deg,#f6c9d6,#f3b4c8);
+    padding:26px 18px 30px;
+  }
+  .phone-time{color:#fff;text-align:center;margin-bottom:22px;text-shadow:0 2px 6px rgba(120,20,50,.25)}
+  .phone-time .hh{font-family:'Playfair Display',serif;font-size:44px;font-weight:700;line-height:1}
+  .phone-time .dd{font-size:12px;letter-spacing:1px;margin-top:4px;opacity:.9;font-family:'Inter',sans-serif}
+  .notif{
+    width:100%;max-width:320px;background:#fffaf5;border-radius:16px;
+    padding:11px 13px;display:flex;gap:10px;margin-bottom:10px;
+    box-shadow:0 10px 20px -10px rgba(120,20,50,.35);
+  }
+  .notif-ico{width:34px;height:34px;border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:16px}
+  .notif-body{flex:1;min-width:0}
+  .notif-top{display:flex;justify-content:space-between;font-size:9.5px;color:#b8718a;text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px;font-family:'Inter',sans-serif}
+  .notif-sender{font-size:12.5px;font-weight:600;color:#3a0f1a;font-family:'Inter',sans-serif}
+  .notif-msg{font-size:11.5px;color:#6b3648;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:'Inter',sans-serif}
+  .notif-target{
+    cursor:pointer;background:#fdeef0;border:1.5px solid #e28aa3;
+    animation:pop 1.6s ease-in-out infinite;
+  }
+  .notif-target .notif-ico{background:#b83b5e;color:#fff}
+  .phone-hint{color:#fff;font-size:13px;margin-top:14px;text-shadow:0 1px 4px rgba(120,20,50,.25);font-family:'Dancing Script',cursive}
+
+  /* ---- pinterest-style vision board (final step) ---- */
   .board-masonry{column-count:2;column-gap:14px;padding:6px 4px 4px}
   .board-item{break-inside:avoid;margin-bottom:16px}
   .board-item.full-span{column-span:all}
@@ -242,10 +264,55 @@ Happy Girlfriend's Day, my love. You're stuck with me forever now. 💕</textare
         <button class="btn btn-sm" onclick="copyLink()">Copy</button>
       </div>
       <div id="copy-msg" style="display:none;color:#4a8a5c;font-size:11px;margin-top:8px">Copied!</div>
-      <button class="btn-ghost" style="margin-top:20px" onclick="goTo('step-envelope')">Preview it</button>
+      <button class="btn-ghost" style="margin-top:20px" onclick="goTo('step-notifications')">Preview it</button>
     </section>
 
-    <!-- ============ STEP 1 — ENVELOPE ============ -->
+    <!-- ============ STEP 1 — NOTIFICATIONS (phone lock screen) ============ -->
+    <section id="step-notifications" style="display:none;flex:1;flex-direction:column">
+      <button id="notif-edit-btn" class="btn-ghost btn-sm" style="position:absolute;top:14px;left:14px;z-index:5" onclick="goTo('step-intake')">← Edit</button>
+      <div class="phone-bg">
+        <div class="phone-time">
+          <div class="hh" id="notif-clock">9:41</div>
+          <div class="dd">Girlfriend's Day</div>
+        </div>
+
+        <div class="notif">
+          <div class="notif-ico" style="background:#ffe3ec">📦</div>
+          <div class="notif-body">
+            <div class="notif-top"><span>Delivery</span><span>2m</span></div>
+            <div class="notif-sender">Your package</div>
+            <div class="notif-msg">Out for delivery, arriving today</div>
+          </div>
+        </div>
+        <div class="notif">
+          <div class="notif-ico" style="background:#e3f3e6">💧</div>
+          <div class="notif-body">
+            <div class="notif-top"><span>Reminder</span><span>6m</span></div>
+            <div class="notif-sender">Hydration check</div>
+            <div class="notif-msg">Drink some water, you forgot again</div>
+          </div>
+        </div>
+        <div class="notif">
+          <div class="notif-ico" style="background:#f3e3fb">🎧</div>
+          <div class="notif-body">
+            <div class="notif-top"><span>Music</span><span>14m</span></div>
+            <div class="notif-sender">Your playlist</div>
+            <div class="notif-msg">Updated with 12 new tracks</div>
+          </div>
+        </div>
+        <div class="notif notif-target" onclick="openNotification()">
+          <div class="notif-ico">💌</div>
+          <div class="notif-body">
+            <div class="notif-top"><span>Now</span><span>•</span></div>
+            <div class="notif-sender" id="notif-sender-name">Someone</div>
+            <div class="notif-msg">sent you something 💕 tap to open</div>
+          </div>
+        </div>
+        <div class="phone-hint">tap the glowing one</div>
+      </div>
+    </section>
+
+    <!-- ============ STEP 2 — ENVELOPE ============ -->
     <section id="step-envelope" style="display:none;flex:1;flex-direction:column;align-items:center;justify-content:center;padding:36px 26px;text-align:center">
       <button id="env-edit-btn" class="btn-ghost btn-sm" style="position:absolute;top:14px;left:14px;z-index:5" onclick="goBackTo('step-intake')">← Edit</button>
       <div class="font-display fade-up" style="font-size:26px;font-weight:700;color:#3a0f1a;margin-bottom:26px" id="env-title">Happy Girlfriend's Day</div>
@@ -264,7 +331,7 @@ Happy Girlfriend's Day, my love. You're stuck with me forever now. 💕</textare
       <div style="font-size:10px;letter-spacing:2px;color:#d9a9b5;text-transform:uppercase;margin-top:30px">designs by joy</div>
     </section>
 
-    <!-- ============ STEP 1.5 — GIF WELCOME ============ -->
+    <!-- ============ STEP 2.5 — GIF WELCOME ============ -->
     <section id="step-gif" style="display:none;flex:1;flex-direction:column;align-items:center;justify-content:center;padding:34px 26px;text-align:center;position:relative;overflow:hidden">
       <button class="btn-ghost btn-sm" style="position:absolute;top:14px;left:14px;z-index:5" onclick="goBackTo('step-envelope')">← Back</button>
       <div style="position:absolute;top:18px;left:22px;font-size:16px;opacity:.5">🎀</div>
@@ -290,7 +357,7 @@ Happy Girlfriend's Day, my love. You're stuck with me forever now. 💕</textare
       <button class="btn fade-up" style="margin-top:28px" onclick="goTo('step-letter')">Open the letter →</button>
     </section>
 
-    <!-- ============ STEP 2 — LETTER ============ -->
+    <!-- ============ STEP 3 — LETTER ============ -->
     <section id="step-letter" style="display:none;flex:1;flex-direction:column">
       <div style="display:flex;flex:1;min-height:0">
         <div style="width:38%;position:relative;overflow:hidden">
@@ -310,7 +377,7 @@ Happy Girlfriend's Day, my love. You're stuck with me forever now. 💕</textare
       </div>
     </section>
 
-    <!-- ============ STEP 3 — VISION BOARD (pinterest-style masonry) ============ -->
+    <!-- ============ STEP 4 — VISION BOARD (pinterest-style masonry, final) ============ -->
     <section id="step-gallery" style="display:none;flex:1;flex-direction:column;padding:28px 22px 24px;text-align:center;overflow-y:auto">
       <div class="font-script fade-up" style="font-size:22px;color:#3a0f1a;margin-bottom:4px">every little moment, with you</div>
       <div class="fade-up" style="font-size:10.5px;letter-spacing:1px;color:#cda5ae;text-transform:uppercase;margin-bottom:16px">pinned, just for her</div>
@@ -521,13 +588,13 @@ function startPreview(){
   document.getElementById('intake-err').style.display='none';
   state.recipient = recipient; state.sender = sender; state.message = message;
 
-  // envelope + letter photo are the local static images — nothing to set here
+  document.getElementById('notif-sender-name').textContent = sender;
   document.getElementById('env-title').textContent = `Happy Girlfriend's Day`;
   document.getElementById('letter-name').textContent = recipient;
   document.getElementById('letter-sender').textContent = sender;
   populateBoard(state.photos);
 
-  goTo('step-envelope');
+  goTo('step-notifications');
 }
 
 function goToPayment(){
@@ -742,6 +809,7 @@ async function finalizeSurprise(order){
 
     document.getElementById('out-link').value = link;
 
+    document.getElementById('notif-sender-name').textContent = order.sender;
     document.getElementById('env-title').textContent = `Happy Girlfriend's Day`;
     document.getElementById('letter-name').textContent = order.recipient;
     document.getElementById('letter-sender').textContent = order.sender;
@@ -798,6 +866,11 @@ function copyLink(){
   });
 }
 
+/* ---------- notification tap ---------- */
+function openNotification(){
+  goTo('step-envelope');
+}
+
 /* ---------- envelope ---------- */
 function openEnvelope(){
   document.getElementById('env-flap').style.transform = 'scaleY(0)';
@@ -838,9 +911,21 @@ function typewriterLetter(text){
   }, 24);
 }
 
+/* ---------- clock (decorative, real local time) ---------- */
+(function tickClock(){
+  const el = document.getElementById('notif-clock');
+  function upd(){
+    const d = new Date();
+    let h = d.getHours()%12; if(h===0) h=12;
+    const m = String(d.getMinutes()).padStart(2,'0');
+    if(el) el.textContent = `${h}:${m}`;
+  }
+  upd(); setInterval(upd, 15000);
+})();
+
 /* ---------- nav ---------- */
 function goTo(id){
-  ['step-intake','step-payment','step-linkout','step-envelope','step-gif','step-letter','step-gallery','step-bootload'].forEach(s=>{
+  ['step-intake','step-payment','step-linkout','step-notifications','step-envelope','step-gif','step-letter','step-gallery','step-bootload'].forEach(s=>{
     document.getElementById(s).style.display = 'none';
   });
   const el = document.getElementById(id);
@@ -869,6 +954,7 @@ function renderViewer(recipient, sender, message, photos){
   state.message = message;
   state.photos = photos;
 
+  document.getElementById('notif-sender-name').textContent = sender;
   document.getElementById('env-title').textContent = `Happy Girlfriend's Day`;
   document.getElementById('letter-name').textContent = recipient;
   document.getElementById('letter-sender').textContent = sender;
@@ -876,8 +962,9 @@ function renderViewer(recipient, sender, message, photos){
 
   document.getElementById('gallery-actions').innerHTML = '<button class="btn-ghost" onclick="goTo(\'step-letter\')">← Back</button>';
   document.getElementById('gallery-restart').style.display = 'none';
+  document.getElementById('notif-edit-btn').style.display = 'none';
   document.getElementById('env-edit-btn').style.display = 'none';
-  goTo('step-envelope');
+  goTo('step-notifications');
 }
 
 (async function initViewer(){
