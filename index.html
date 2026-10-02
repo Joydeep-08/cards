@@ -2494,11 +2494,9 @@ body {
   .sticker{ width:70px; height:70px; font-size:.62rem; top:-16px; right:-10px; }
 }
 
-/* ── Letter typewriter cursor ── */
 .letter-cursor{ display:inline-block; width:2px; height:1em; background:var(--ink); animation:blink .75s step-end infinite; vertical-align:text-bottom; margin-left:1px; }
 @keyframes blink{ 0%,100%{ opacity:1; } 50%{ opacity:0; } }
 
-/* ── Balloon pop step ── */
 #step-balloons{ position:relative; }
 .balloon-title{ font-family:'Baloo 2', sans-serif; font-size:1.5rem; font-weight:700; color:var(--ink); margin-bottom:4px; }
 .balloon-sub{ font-size:.8rem; color:var(--ink-soft); font-weight:500; margin-bottom:18px; background:var(--paper-2); border:2px solid var(--ink); border-radius:100px; padding:4px 16px; box-shadow:2px 2px 0 var(--ink); }
@@ -2513,7 +2511,6 @@ body {
 .spk{ position:fixed; pointer-events:none; z-index:700; border-radius:50%; animation:spkFly .7s ease-out forwards; }
 @keyframes spkFly{ 0%{ transform:translate(0,0) scale(1); opacity:1; } 100%{ transform:translate(var(--dx),var(--dy)) scale(0); opacity:0; } }
 
-/* ── Polaroid reveal overlay ── */
 #cardReveal{ position:fixed; inset:0; z-index:700; display:none; align-items:center; justify-content:center; padding:24px; background:rgba(36,16,25,.55); backdrop-filter:blur(6px); }
 #cardReveal.show{ display:flex; }
 .polwrap{ display:flex; flex-direction:column; align-items:center; gap:18px; }
@@ -2524,7 +2521,6 @@ body {
 .polcaption{ height:55px; display:flex; align-items:center; justify-content:center; padding:6px 8px; }
 .polmsg{ font-family:'Caveat', cursive; font-size:1.05rem; color:var(--ink); text-align:center; line-height:1.3; }
 
-/* ── Final reveal — quiet, sincere dressing ── */
 #step-final{ position:relative; }
 .final-glow{
   position:absolute; inset:-30px -20px auto -20px; height:420px; z-index:-1; border-radius:40px;
@@ -2684,8 +2680,10 @@ body {
       </div>
       <div id="coupon-err" style="display:none;color:#c62828;font-size:12px;margin-bottom:8px">Invalid coupon code.</div>
 
+      <div id="pay-err" style="display:none;color:#c62828;font-size:12.5px;line-height:1.5;margin-top:14px;text-align:center;background:#fff0f0;border:2px solid #c62828;border-radius:10px;padding:10px 12px"></div>
+
       <button id="pay-btn" class="btn" style="margin-top:18px;width:100%" onclick="handlePayment()">Pay & Get Link</button>
-      <button class="btn-ghost" style="margin-top:10px;width:100%" onclick="goTo('step-final')">← Back</button>
+      <button class="btn-ghost" id="pay-back" style="margin-top:10px;width:100%" onclick="goTo('step-final')">← Back</button>
 
       <div id="pay-loading" style="display:none;align-items:center;justify-content:center;gap:10px;margin-top:18px">
         <div class="spinner"></div>
@@ -2759,7 +2757,7 @@ body {
       <div class="bfield" id="bfield"></div>
     </section>
 
-    <!-- ============ STEP: FINAL REVEAL (default gif + the one photo) ============ -->
+    <!-- ============ STEP: FINAL REVEAL ============ -->
     <section id="step-final" class="step" style="align-items:center;text-align:center">
       <div class="final-glow"></div>
       <div style="position:relative;width:100%;max-width:320px">
@@ -2812,22 +2810,17 @@ body {
 </div>
 
 <script>
-/* ---------- config ----------
-   Sorry app's own Supabase project + Razorpay key.
-   NOTE: double-check these are from the SAME Supabase project (URL + anon key ref
-   should match) before wiring up the table/bucket — worth re-copying both fresh
-   from the project's API settings page if you haven't already. */
+/* ---------- config ---------- */
 const SUPABASE_URL = 'https://rulpkgkgieztsdvpkuso.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ1bHBrZ2tnaWV6dHNkdnBrdXNvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0ODE3OTYsImV4cCI6MjA5NjA1Nzc5Nn0.VY50njf_lIvFP5RpwlTTiSe2z8vnyuwP-Gi9krKk60U';
-const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const sb = (window.supabase && window.supabase.createClient)
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+  : null;
 const RAZORPAY_KEY = 'rzp_live_SmizRaPApu81ZS';
 const BASE_PRICE = 99;
 const COUPONS = { 'FREN': 0, 'FREN1': 1, 'LOVE': 59, 'FE': 0 };
-/* Default reveal image — a local asset you add yourself next to this HTML file.
-   Drop your photo in the same folder as this file, named exactly "photo.jpeg". */
 const BOUQUET_IMG = './photo.jpeg';
 
-/* Little rotating lines for the final reveal subtitle */
 const FINAL_QUOTES = [
   "you're my favourite person",
   "thank you for being you",
@@ -2847,6 +2840,20 @@ let state = { recipient:'', sender:'', message:'', gifUrl:null };
 let currentPrice = BASE_PRICE;
 let appliedCoupon = null;
 let isSharedView = false;
+
+/* payment / save state (survives retries so nobody gets charged twice) */
+let paidPaymentId = null;   // set once Razorpay confirms payment
+let saving = false;         // blocks double-clicks while saving
+let cachedUrls = {};        // uploaded photo URLs, so a retry doesn't re-upload
+let savedLink = null;       // set once the row exists
+
+/* ---------- helpers ---------- */
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 6);
+function errMsg(e){
+  if(!e) return 'unknown error';
+  return e.message || e.error_description || e.details || (typeof e === 'string' ? e : JSON.stringify(e));
+}
 
 /* ---------- relation chips ---------- */
 document.getElementById('relationChips').addEventListener('click', (e) => {
@@ -2877,10 +2884,8 @@ function countChars(el) {
   document.getElementById('charCount').textContent = el.value.length;
 }
 
-/* ---------- photo (single, optional) ---------- */
-function handlePhotoFile(file){
-  if(!file) return;
-  photoFile = file;
+/* ---------- photos (compressed in the browser; the compressed version is what gets uploaded) ---------- */
+function compressImage(file, cb){
   const reader = new FileReader();
   reader.onload = (e) => {
     const img = new Image();
@@ -2892,20 +2897,29 @@ function handlePhotoFile(file){
       const canvas = document.createElement('canvas');
       canvas.width = w; canvas.height = h;
       canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-      photoDataUrl = canvas.toDataURL('image/jpeg', 0.78);
-
-      document.getElementById('photoPreview').src = photoDataUrl;
-      document.getElementById('photoPreviewWrap').classList.add('show');
-      document.getElementById('photoDrop').style.display = 'none';
-      document.getElementById('photoRemoveBtn').style.display = 'inline-flex';
+      cb(canvas.toDataURL('image/jpeg', 0.78));
     };
+    img.onerror = () => alert("Couldn't read that photo. Try a different one (JPG or PNG works best).");
     img.src = e.target.result;
   };
   reader.readAsDataURL(file);
 }
+
+function handlePhotoFile(file){
+  if(!file) return;
+  photoFile = file;
+  compressImage(file, (url) => {
+    photoDataUrl = url;
+    document.getElementById('photoPreview').src = url;
+    document.getElementById('photoPreviewWrap').classList.add('show');
+    document.getElementById('photoDrop').style.display = 'none';
+    document.getElementById('photoRemoveBtn').style.display = 'inline-flex';
+  });
+}
 function removePhoto(){
   photoDataUrl = null;
   photoFile = null;
+  delete cachedUrls.p1;
   document.getElementById('photoInput').value = '';
   document.getElementById('photoPreviewWrap').classList.remove('show');
   document.getElementById('photoDrop').style.display = 'block';
@@ -2914,31 +2928,18 @@ function removePhoto(){
 function handlePhotoFile2(file){
   if(!file) return;
   photoFile2 = file;
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    const img = new Image();
-    img.onload = () => {
-      const maxDim = 900;
-      let w = img.width, h = img.height;
-      if(w > h && w > maxDim){ h = Math.round(h * maxDim / w); w = maxDim; }
-      else if(h >= w && h > maxDim){ w = Math.round(w * maxDim / h); h = maxDim; }
-      const canvas = document.createElement('canvas');
-      canvas.width = w; canvas.height = h;
-      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-      photoDataUrl2 = canvas.toDataURL('image/jpeg', 0.78);
-
-      document.getElementById('photoPreview2').src = photoDataUrl2;
-      document.getElementById('photoPreviewWrap2').classList.add('show');
-      document.getElementById('photoDrop2').style.display = 'none';
-      document.getElementById('photoRemoveBtn2').style.display = 'inline-flex';
-    };
-    img.src = e.target.result;
-  };
-  reader.readAsDataURL(file);
+  compressImage(file, (url) => {
+    photoDataUrl2 = url;
+    document.getElementById('photoPreview2').src = url;
+    document.getElementById('photoPreviewWrap2').classList.add('show');
+    document.getElementById('photoDrop2').style.display = 'none';
+    document.getElementById('photoRemoveBtn2').style.display = 'inline-flex';
+  });
 }
 function removePhoto2(){
   photoDataUrl2 = null;
   photoFile2 = null;
+  delete cachedUrls.p2;
   document.getElementById('photoInput2').value = '';
   document.getElementById('photoPreviewWrap2').classList.remove('show');
   document.getElementById('photoDrop2').style.display = 'block';
@@ -2958,7 +2959,7 @@ async function generateMsg() {
   btn.disabled = true;
   normal.style.display = 'none';
   loader.style.display = 'flex';
-  await new Promise(r => setTimeout(r, 900));
+  await sleep(900);
   const msg = (FALLBACKS[tone] || FALLBACKS.wholesome).replace(/\{R\}/g, relation);
   const ta = document.getElementById('mainMessage');
   ta.value = msg;
@@ -3006,6 +3007,13 @@ function updateFinalPhoto(url){
   }
 }
 
+function showPayErr(msg){
+  const el = document.getElementById('pay-err');
+  if(!msg){ el.style.display = 'none'; el.textContent = ''; return; }
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
 function goToPayment(){
   currentPrice = BASE_PRICE;
   appliedCoupon = null;
@@ -3013,12 +3021,14 @@ function goToPayment(){
   document.getElementById('pay-coupon-applied').style.display = 'none';
   document.getElementById('in-coupon').value = '';
   document.getElementById('coupon-err').style.display = 'none';
+  showPayErr('');
   updatePayBtnLabel();
   goTo('step-payment');
 }
 
 /* ---------- coupons ---------- */
 function applyCoupon(){
+  if(paidPaymentId) return; // already paid, nothing to change
   const code = document.getElementById('in-coupon').value.trim().toUpperCase();
   const errEl = document.getElementById('coupon-err');
   if(!code || !(code in COUPONS)){ errEl.style.display = 'block'; return; }
@@ -3032,87 +3042,147 @@ function applyCoupon(){
   updatePayBtnLabel();
 }
 function updatePayBtnLabel(){
-  document.getElementById('pay-btn').textContent = currentPrice === 0 ? 'Get Link — Free' : `Pay ₹${currentPrice} & Get Link`;
+  const b = document.getElementById('pay-btn');
+  if(paidPaymentId) b.textContent = "Payment done ✓ — Tap to get your link";
+  else b.textContent = currentPrice === 0 ? 'Get Link — Free' : `Pay ₹${currentPrice} & Get Link`;
 }
 
 /* ---------- payment ---------- */
 function handlePayment(){
-  if(currentPrice === 0){ finalizeSurprise(); return; }
+  if(saving) return;
+  showPayErr('');
+
+  // Already paid (or free coupon): never open Razorpay again, just (re)try saving.
+  if(paidPaymentId || currentPrice === 0){ finalizeSurprise(); return; }
+
+  if(typeof Razorpay === 'undefined'){
+    showPayErr("Payment window couldn't load. Check your internet and refresh the page.");
+    return;
+  }
   const rzp = new Razorpay({
     key: RAZORPAY_KEY,
     amount: currentPrice * 100,
     currency: 'INR',
     name: "Boyfriend's Day",
     description: `Boyfriend's Day for ${state.recipient}`,
-    handler: function(response){ finalizeSurprise(); },
+    handler: function(response){
+      paidPaymentId = response.razorpay_payment_id || 'paid_unknown';
+      updatePayBtnLabel();
+      finalizeSurprise();
+    },
     theme: { color: '#FF5C8A' }
   });
   rzp.open();
 }
 
-/* ---------- finalize: upload photo (if any), save row, build link ---------- */
-async function finalizeSurprise(){
-  document.getElementById('pay-btn').disabled = true;
-  document.getElementById('pay-loading').style.display = 'flex';
-  try{
-    let photoUrl = null;
-    if(photoFile){
-      const ext = (photoFile.name.split('.').pop() || 'jpg').toLowerCase();
-      const path = `${crypto.randomUUID()}.${ext}`;
-      const { error: upErr } = await sb.storage.from('photos').upload(path, photoFile);
-      if(upErr) throw upErr;
-      const { data: pub } = sb.storage.from('photos').getPublicUrl(path);
-      photoUrl = pub.publicUrl;
-    }
+/* ---------- upload (compressed blob, 3 tries) ---------- */
+async function uploadPhoto(dataUrl){
+  if(!dataUrl) return null;
+  if(!sb) throw new Error('Connection issue. Please refresh the page.');
+  const blob = await (await fetch(dataUrl)).blob();
+  const path = `${uid()}.jpg`;
+  let lastErr;
+  for(let i = 0; i < 3; i++){
+    try{
+      const { error } = await sb.storage.from('photos')
+        .upload(path, blob, { contentType: 'image/jpeg', upsert: true });
+      if(!error) return sb.storage.from('photos').getPublicUrl(path).data.publicUrl;
+      lastErr = error;
+    }catch(e){ lastErr = e; }
+    if(i < 2) await sleep(800 * (i + 1));
+  }
+  throw lastErr;
+}
 
-    let photo2Url = null;
-    if(photoFile2){
-      const ext2 = (photoFile2.name.split('.').pop() || 'jpg').toLowerCase();
-      const path2 = `${crypto.randomUUID()}.${ext2}`;
-      const { error: upErr2 } = await sb.storage.from('photos').upload(path2, photoFile2);
-      if(upErr2) throw upErr2;
-      const { data: pub2 } = sb.storage.from('photos').getPublicUrl(path2);
-      photo2Url = pub2.publicUrl;
-    }
+/* ---------- insert row (3 tries; works even if payment_id column isn't added yet) ---------- */
+async function insertRow(row){
+  if(!sb) throw new Error('Connection issue. Please refresh the page.');
+  let lastErr;
+  for(let i = 0; i < 3; i++){
+    try{
+      let { data, error } = await sb.from('friendship_day').insert(row).select('id').single();
+      if(error && /payment_id/i.test(errMsg(error))){
+        const { payment_id, ...rest } = row;
+        ({ data, error } = await sb.from('friendship_day').insert(rest).select('id').single());
+      }
+      if(!error && data) return data;
+      lastErr = error || new Error('No row returned');
+    }catch(e){ lastErr = e; }
+    if(i < 2) await sleep(800 * (i + 1));
+  }
+  throw lastErr;
+}
+
+/* ---------- finalize: upload photos, save row, build link ---------- */
+async function finalizeSurprise(){
+  if(saving) return;
+  saving = true;
+  const payBtn = document.getElementById('pay-btn');
+  payBtn.disabled = true;
+  document.getElementById('pay-back').disabled = true;
+  document.getElementById('pay-loading').style.display = 'flex';
+  showPayErr('');
+  try{
+    if(!('p1' in cachedUrls)) cachedUrls.p1 = await uploadPhoto(photoDataUrl);
+    if(!('p2' in cachedUrls)) cachedUrls.p2 = await uploadPhoto(photoDataUrl2);
+    const photoUrl = cachedUrls.p1;
+    const photo2Url = cachedUrls.p2;
     state.gifUrl = photo2Url || BOUQUET_IMG;
 
-    const { data: inserted, error: dbErr } = await sb.from('friendship_day').insert({
-      recipient: state.recipient,
-      sender: state.sender,
-      message: state.message,
-      photo: photoUrl,
-      photo2: photo2Url,
-      gif_url: state.gifUrl,
-      price: currentPrice,
-      coupon: appliedCoupon,
-      paid: true
-    }).select('id').single();
-    if(dbErr) throw dbErr;
+    if(!savedLink){
+      const inserted = await insertRow({
+        recipient: state.recipient,
+        sender: state.sender,
+        message: state.message,
+        photo: photoUrl,
+        photo2: photo2Url,
+        gif_url: state.gifUrl,
+        price: currentPrice,
+        coupon: appliedCoupon,
+        paid: true,
+        payment_id: paidPaymentId
+      });
+      savedLink = `${location.origin}${location.pathname}?id=${inserted.id}`;
+    }
 
-    const link = `${location.origin}${location.pathname}?id=${inserted.id}`;
-    document.getElementById('out-link').value = link;
-    drawQR(link);
-
+    document.getElementById('out-link').value = savedLink;
+    drawQR(savedLink);
     document.getElementById('final-gif').src = state.gifUrl;
     updateFinalPhoto(photoUrl);
     goTo('step-linkout');
+
+    // done: reset so the next surprise starts clean
+    paidPaymentId = null; savedLink = null; cachedUrls = {};
   }catch(err){
     console.error(err);
-    alert("Something went wrong creating the link. Please try again.");
+    const m = errMsg(err);
+    if(paidPaymentId){
+      showPayErr(`Your payment went through (ID: ${paidPaymentId}), but saving hit a snag: ${m}. Tap the button again to retry — you will NOT be charged twice. If it keeps failing, screenshot this and send it to support.`);
+    }else{
+      showPayErr(`Couldn't create the link: ${m}. Please try again.`);
+    }
   }finally{
-    document.getElementById('pay-btn').disabled = false;
+    saving = false;
+    payBtn.disabled = false;
+    document.getElementById('pay-back').disabled = false;
     document.getElementById('pay-loading').style.display = 'none';
+    updatePayBtnLabel();
   }
 }
 
 function copyLink(){
   const inp = document.getElementById('out-link');
   inp.select();
-  navigator.clipboard.writeText(inp.value).then(()=>{
+  const done = () => {
     const msg = document.getElementById('copy-msg');
     msg.style.display = 'block';
     setTimeout(()=> msg.style.display='none', 1800);
-  });
+  };
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(inp.value).then(done).catch(()=>{ try{ document.execCommand('copy'); done(); }catch(e){} });
+  } else {
+    try{ document.execCommand('copy'); done(); }catch(e){}
+  }
 }
 
 /* ---------- balloons ---------- */
@@ -3129,7 +3199,6 @@ let balloonMsgs   = [];
 let leftToPop     = 0;
 let allPoppedFlag = false;
 
-/* GIF bank — one per balloon, in the order the messages appear. */
 const GIFS = [
   'https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHFvaTRjMDIxNjZxY3A1OWRpbTIxMmF5M3pxOWNqeDJkZm10ejV4bSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/Lr6hRUytUcabMUlHS6/giphy.gif',
   'https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNTU3NmZieXoybW50M2xyMHh3eDAwbDJmZms2bTdhbGdkN3cxZG82eiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/fhLgA6nJec3Cw/giphy.gif',
@@ -3198,7 +3267,7 @@ function playPop(){
 }
 
 function goToBalloons(){
-  typing = false; // stop the typewriter if the letter wasn't finished yet
+  typing = false;
   balloonMsgs = getBalloonMsgs(state.recipient || relation);
   goTo('step-balloons');
   preloadGifs();
@@ -3268,7 +3337,6 @@ function popBalloon(i, msg, el){
   polImg.style.display = 'block';
   polWrap.style.background = 'none';
   polImg.onerror = () => {
-    // Asset not found — fall back to the plain gradient card instead of a broken image icon
     polImg.style.display = 'none';
     polWrap.style.background = 'linear-gradient(135deg, var(--yellow-soft), var(--sky-soft))';
   };
@@ -3374,13 +3442,13 @@ function drawCert(){
   };
 
   ctx.clearRect(0, 0, 1200, 1600);
-  ctx.fillStyle = INK; ctx.fillRect(54, 54, 1130, 1530);           // hard shadow
-  ctx.fillStyle = '#FFF0F5'; ctx.fillRect(40, 40, 1120, 1520);     // paper
+  ctx.fillStyle = INK; ctx.fillRect(54, 54, 1130, 1530);
+  ctx.fillStyle = '#FFF0F5'; ctx.fillRect(40, 40, 1120, 1520);
   ctx.strokeStyle = INK; ctx.lineWidth = 10; ctx.strokeRect(40, 40, 1120, 1520);
   ctx.strokeStyle = CORAL; ctx.lineWidth = 4; ctx.setLineDash([18, 12]);
   ctx.strokeRect(80, 80, 1040, 1440); ctx.setLineDash([]);
 
-  [[80,80],[1120,80],[80,1520],[1120,1520]].forEach(([x, y]) => {   // corner badges
+  [[80,80],[1120,80],[80,1520],[1120,1520]].forEach(([x, y]) => {
     ctx.beginPath(); ctx.arc(x, y, 36, 0, Math.PI * 2);
     ctx.fillStyle = YEL; ctx.fill(); ctx.lineWidth = 6; ctx.strokeStyle = INK; ctx.stroke();
     text('♥', y + 12, '700 36px "Work Sans", sans-serif', PINK, '0px', x);
@@ -3390,7 +3458,7 @@ function drawCert(){
   text('CERTIFICATE', 320, '800 140px "Baloo 2", sans-serif', INK);
   text('OF BOYFRIEND', 430, '800 100px "Baloo 2", sans-serif', PINK);
 
-  ctx.beginPath(); ctx.strokeStyle = CORAL; ctx.lineWidth = 6;      // wavy divider
+  ctx.beginPath(); ctx.strokeStyle = CORAL; ctx.lineWidth = 6;
   for(let x = 200; x <= 1000; x += 4){
     const y = 480 + Math.sin(x / 18) * 8;
     x === 200 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
@@ -3403,7 +3471,7 @@ function drawCert(){
   text('is hereby officially appointed as the', 810, '600 36px "Work Sans", sans-serif', SOFT);
   fit('BOYFRIEND OF ' + sender.toUpperCase(), 885, 800, 64, '"Baloo 2", sans-serif', INK, 900);
 
-  ctx.fillStyle = YELS; ctx.fillRect(150, 950, 900, 420);           // terms box
+  ctx.fillStyle = YELS; ctx.fillRect(150, 950, 900, 420);
   ctx.strokeStyle = INK; ctx.lineWidth = 4; ctx.strokeRect(150, 950, 900, 420);
   text('Terms & Conditions*', 1012, '800 44px "Baloo 2", sans-serif', INK);
   CERT_TERMS.forEach((t, i) => {
@@ -3414,7 +3482,6 @@ function drawCert(){
   });
   text('*terms subject to change based on my mood', 1350, '600 30px "Caveat", cursive', SOFT);
 
-  // signature + seal
   fit(sender, 1445, 700, 70, '"Caveat", cursive', PINK, 400, 340);
   ctx.fillStyle = INK; ctx.fillRect(160, 1458, 360, 4);
   const d = new Date().toLocaleDateString('en-IN', { day:'numeric', month:'long', year:'numeric' });
@@ -3437,7 +3504,7 @@ function downloadCert(){
   a.click();
 }
 
-/* ---------- cute QR (rounded pink dots, eye frames, heart in the middle) ---------- */
+/* ---------- cute QR ---------- */
 async function drawQR(link){
   try{
     await Promise.all([
@@ -3450,23 +3517,22 @@ async function drawQR(link){
   const n = qr.getModuleCount();
   const c = document.getElementById('qrCanvas');
   const ctx = c.getContext('2d');
-  const rr = (x, y, w, h, r) => { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); };
+  const rr = (x, y, w, h, r) => { ctx.beginPath(); if(ctx.roundRect) ctx.roundRect(x, y, w, h, r); else ctx.rect(x, y, w, h); };
   const txt = (t, y, font, color) => { ctx.font = font; ctx.fillStyle = color; ctx.textAlign = 'center'; ctx.fillText(t, 350, y); };
 
   ctx.clearRect(0, 0, 700, 820);
-  ctx.fillStyle = INK; rr(34, 34, 650, 770, 40); ctx.fill();          // hard shadow
+  ctx.fillStyle = INK; rr(34, 34, 650, 770, 40); ctx.fill();
   ctx.fillStyle = '#FFF0F5'; rr(20, 20, 650, 770, 40); ctx.fill();
   ctx.lineWidth = 8; ctx.strokeStyle = INK; rr(20, 20, 650, 770, 40); ctx.stroke();
 
   txt('scan me ♥', 100, '800 58px "Baloo 2", sans-serif', INK);
 
-  // white QR panel
   ctx.fillStyle = '#FFFAFC'; rr(85, 135, 520, 520, 28); ctx.fill();
   ctx.lineWidth = 5; ctx.strokeStyle = CORAL; ctx.setLineDash([16, 10]); rr(85, 135, 520, 520, 28); ctx.stroke(); ctx.setLineDash([]);
 
   const size = 440, ox = 125, oy = 175, m = size / n;
   const inEye = (r, q) => (r < 7 && q < 7) || (r < 7 && q >= n - 7) || (r >= n - 7 && q < 7);
-  const mid = n / 2, clear = 4.6;                                     // heart clearing (in modules)
+  const mid = n / 2, clear = 4.6;
 
   for(let r = 0; r < n; r++){
     for(let q = 0; q < n; q++){
@@ -3477,7 +3543,6 @@ async function drawQR(link){
     }
   }
 
-  // finder "eyes": rounded ring + rounded core
   [[0, 0], [0, n - 7], [n - 7, 0]].forEach(([r, q]) => {
     const x = ox + q * m, y = oy + r * m;
     ctx.lineWidth = m; ctx.strokeStyle = INK;
@@ -3485,14 +3550,12 @@ async function drawQR(link){
     ctx.fillStyle = CORAL; rr(x + 2 * m, y + 2 * m, 3 * m, 3 * m, m * 1.1); ctx.fill();
   });
 
-  // heart badge in the middle
   ctx.fillStyle = '#FFFAFC'; ctx.beginPath(); ctx.arc(ox + size / 2, oy + size / 2, m * 4.3, 0, Math.PI * 2); ctx.fill();
   ctx.lineWidth = 4; ctx.strokeStyle = INK; ctx.stroke();
   ctx.font = `${Math.round(m * 5)}px "Work Sans", sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillStyle = CORAL; ctx.fillText('♥', ox + size / 2, oy + size / 2 + m * .3);
   ctx.textBaseline = 'alphabetic';
 
-  // sparkles + caption
   ctx.font = '700 34px "Work Sans", sans-serif'; ctx.fillStyle = CORAL;
   ctx.fillText('✦', 60, 130); ctx.fillText('✦', 640, 690); ctx.fillStyle = YEL; ctx.fillText('✦', 640, 120); ctx.fillText('✦', 56, 700);
   txt('open it for a little surprise', 725, '700 44px "Caveat", cursive', PINK);
@@ -3517,10 +3580,11 @@ function restartFlow(){
   document.getElementById('env-flap').style.transform = 'scaleY(1)';
   document.getElementById('env-hint').textContent = 'tap to open';
   document.getElementById('pageHeader').style.display = 'block';
+  cachedUrls = {}; // form may change, so don't reuse old uploads
   goTo('step-intake');
 }
 
-/* ---------- viewer mode: ?id=<row id> (new) or ?d=<base64 payload> (legacy links) ---------- */
+/* ---------- viewer mode ---------- */
 function renderSharedCard(recipient, sender, message, photo, gif){
   isSharedView = true;
   state.recipient = recipient;
@@ -3549,16 +3613,20 @@ function renderSharedCard(recipient, sender, message, photo, gif){
   const d = params.get('d');
 
   if(id){
-    try{
-      const { data, error } = await sb.from('friendship_day')
-        .select('recipient, sender, message, photo, gif_url')
-        .eq('id', id)
-        .single();
-      if(error) throw error;
-      renderSharedCard(data.recipient, data.sender, data.message, data.photo, data.gif_url);
-    }catch(err){
-      console.error('Could not load surprise', err);
+    let lastErr;
+    for(let i = 0; i < 3; i++){   // retry so a flaky connection doesn't show a blank page
+      try{
+        if(!sb) throw new Error('supabase not loaded');
+        const { data, error } = await sb.from('friendship_day')
+          .select('recipient, sender, message, photo, gif_url')
+          .eq('id', id)
+          .single();
+        if(error) throw error;
+        renderSharedCard(data.recipient, data.sender, data.message, data.photo, data.gif_url);
+        return;
+      }catch(err){ lastErr = err; await sleep(700 * (i + 1)); }
     }
+    console.error('Could not load surprise', lastErr);
     return;
   }
 
