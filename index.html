@@ -322,9 +322,14 @@ const CAT = "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3ejQ5bmwwb3ZuamNpZX
 /* ---------- CONTENT ---------- */
 const DEFAULT_MSG = "I may have messed up a bit. I never meant to hurt you, sometimes my brain trips over my heart. What I do know for sure is how much you matter to me. You're incredibly special to me, and I hate the idea of being the reason you felt anything less than loved. Thank you for being you. I hope this makes you smile, even just a little.";
 const SONGS = [
-  {t:"High On You", s:"Basically… my heart, signed over 💞", f:"song.mp3"},
-  {t:"For a Reason", s:"I'd still choose you 🤍", f:"song1.mp3"},
+  {t:"I Love You", s:"Basically… my heart, signed over 💞", f:"song.mp3"},
+  {t:"Wannabe Yours", s:"Cause , why not!? 🤍", f:"song1.mp3"},
   {t:"Dil ka Jo Haal hai", s:"Because feelings happened 💞", f:"song2.mp3"}
+];
+const NOTE_GIFS = [
+  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExaG9jbzlqaTNoOWZudTA5emU2eWRvaWZrOXdrdjkwdW1kZHh5b3NzeSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/ytu2GUYbvhz7zShGwS/giphy.gif",
+  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExYWU2OGxuNm5vbXo2eXN4M3J0eXQyZXVzYTl2dzFudGExdDVlZG15NyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/TjSPQgowhhJdHgvnwA/giphy.gif",
+  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExYWU2OGxuNm5vbXo2eXN4M3J0eXQyZXVzYTl2dzFudGExdDVlZG15NyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/14d8Aj81ffgnQY/giphy.gif"
 ];
 const NOTES = [
   {front:"I may have been a little dumb sometimes 😢", ctx:"No bad intentions, just bad timing. I'm working on it. 🥺"},
@@ -466,7 +471,7 @@ function render(d){
   $("notes").innerHTML = NOTES.map((n,i)=>`
     <button class="sticky" aria-label="Flip note ${i+1}"><div>
       <div class="sf">${esc(n.front)}</div>
-      <div class="sb">${ph[i] ? `<img src="${esc(ph[i])}" alt="">` : ""}<b>Context:</b><span>${esc(n.ctx)}</span></div>
+      <div class="sb"><img src="${esc(NOTE_GIFS[i])}" alt=""><b>Context:</b><span>${esc(n.ctx)}</span></div>
     </div></button>`).join("");
   document.querySelectorAll(".sticky").forEach(b=>b.onclick=()=>b.classList.toggle("on"));
 }
